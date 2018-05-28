@@ -5,8 +5,8 @@
  */           
 ; (function () {
     'use strict';
-    var ow = document.documentElement.clientWidth;
-    var oh = document.documentElement.clientHeight;
+    var ow = window.screen.width;
+    var oh = window.screen.height;
     var ease = 'cubic-bezier(0.1, 0.57, 0.1, 1)';
     var prefix = '', vendors = { Webkit: 'webkit', Moz: '', O: 'o' },
         transform, transitionProperty, transitionDuration, transitionTiming, wrappedCallback;
