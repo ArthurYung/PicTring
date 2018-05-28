@@ -231,6 +231,10 @@
             addEvt(this.$picUp.firstChild, 'change', function () {
                 var files = [].slice.call(this.files);
                 files.forEach(function (file, i) {
+                    if(!/image\/\w+/.test(file.type)){
+                        alert('上传的不是图片');
+                        return false;
+                    };
                     //如果图片大于200kb，则压缩
                     var rander = new FileReader();
                     rander.onload = function () {
