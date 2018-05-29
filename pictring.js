@@ -1,15 +1,15 @@
  /* PicTring v0.2.0
  * By Arthur Yang http://www.vanoc.top/
- * Github: https://github.com/
+ * Github: https://github.com/ChuckOu/PicTring
  * MIT Licensed.
  */           
 ; (function () {
     'use strict';
-    var ow = window.screen.width;
-    var oh = window.screen.height;
+    var ow = document.documentElement.clientWidth;
+    var oh = document.documentElement.clientHeight;
     var ease = 'cubic-bezier(0.1, 0.57, 0.1, 1)';
     var prefix = '', vendors = { Webkit: 'webkit', Moz: '', O: 'o' },
-        transform, transitionProperty, transitionDuration, transitionTiming, wrappedCallback;
+        transform, transitionProperty, transitionDuration, transitionTiming, wrapper, transitionEnd;
     var testEl = document.createElement('div'),
     supportedTransforms = /^((translate|rotate|scale)(X|Y|Z|3d)?|matrix(3d)?|perspective|skew(X|Y)?)$/i,
     upfilesTestNumber= /^[0-9]+$/ ;
@@ -17,64 +17,18 @@
         for (var i in vendors) {
             if (testEl.style[vendors[i] + 'TransitionProperty'] !== undefined) {
                 prefix = '-' + vendors[i].toLowerCase() + '-';
+                wrapper = vendors;
                 break;
             }
         }
     }
     var cssReset = {};
         transform = prefix + 'transform';
+        transitionEnd = wrapper? wrapper+'TransitionEnd':'transitionend';
         cssReset[transitionProperty = prefix + 'transition-property'] =
         cssReset[transitionDuration = prefix + 'transition-duration'] =
         cssReset[transitionTiming = prefix + 'transition-timing-function'] = '';
     
-
-
-    //transition动画
-    function $transl(ele) {
-        return new $transl.prototype.init(ele)
-    }
-    $transl.prototype.to = function (type, time, ease, fn) {
-        var cssValues = {}, transforms = '', cssProperties = [], _this = this;
-        for (var key in type) {
-            if (supportedTransforms.test(key)) transforms += prefix + key + '(' + type[key] + ') '
-            else cssValues[key] = type[key], cssProperties.push(key)
-        }
-        if (transforms) {
-            cssValues[transform] = transforms;
-            cssProperties.push(transform);
-        }
-        cssValues[transitionDuration] = time + 'ms'
-        cssValues[transitionTiming] = (ease || 'linear')
-        cssValues[transitionProperty] = cssProperties.join(', ');
-
-        for (var n in cssValues) {
-            this.ele.style[n] = cssValues[n];
-        }
-        wrappedCallback = function (fn) {
-            for (var i in cssReset) {
-                this.ele.style[i] = '';
-            }
-            fn && fn.call(this.ele);
-
-        }
-        setTimeout(function () {
-            if (_this.fired) return
-            wrappedCallback.call(_this, fn);
-            cssValues = transforms = cssProperties = _this = null;
-        }, time * 1 + 25);
-        return this;
-    }
-    $transl.prototype.css = function(type){
-        for(var i in type){
-            this.ele.style[i]=type[i];
-        };
-        return this;
-    }
-    var $translInit = $transl.prototype.init = function (ele) {
-        this.ele = ele;
-    };
-    $translInit.prototype = $transl.prototype;
-
 
 
 
@@ -88,8 +42,11 @@
     function empty(element) {
         //清空子元素
         if (element.hasChildNodes()) {
-            element.removeChild(element.childNodes[0]);
-            empty(element);
+            if(element.childNodes[0].nodeName=='figure'||element.childNodes[0].nodeName=='FIGURE'){
+                element.removeChild(element.childNodes[0]);
+                empty(element);
+            }
+          
         }
     }
     function removeArray(obj, val) {
@@ -127,15 +84,14 @@
     }
     
     function figPostion(fig){
-        fig.style[transform] = prefix +'translate3d(0,0,0)';
         fig.$left = fig.getBoundingClientRect().left ;
         fig.$top = fig.getBoundingClientRect().top ;
     }
 
-    function touchCenter(fig){
-        if(!fig.startx&&!fig.starty) return;
-        fig.centerx = fig.getBoundingClientRect().left + fig.offsetWidth/2 - fig.startx;
-        fig.centery = fig.getBoundingClientRect().top + fig.offsetHeight/2 - fig.starty;
+    function touchCenter(fig,x,y){
+        if(!x&&!y) return;
+        fig.centerx = fig.getBoundingClientRect().left + fig.offsetWidth/2 - x;
+        fig.centery = fig.getBoundingClientRect().top + fig.offsetHeight/2 - y;
     }
 
     var PicTring = function (options) {
@@ -166,9 +122,7 @@
         this.flex = this.flexPositions.bind(this);
         this.pushPic=this._pushPic.bind(this);
         this.showPic = this._showPic.bind(this);
-        this.$flexDiv = this.create("div", "pic-animate");
-        this.$flexBg = this.create("div", "pic-animate-bg");
-        this.$flexDiv.$append(this.$flexBg);
+        this.$flexBg = this.create("i", "pic-animate-bg");
         this.reviseUp=this._reviseUp.bind(this);
         this.reviseDown=this._reviseDown.bind(this);
         this.longPress = this._longPress.bind(this);
@@ -215,15 +169,31 @@
             div.style.height = oh + 'px';
             document.body.appendChild(div);
             this.element.appendChild(this.$picUp);
+            this.element.appendChild(this.$flexBg);
             this.scrollMove.call(this.$scroller, this);
             this.$nav.$showIn = true;
             this.tap(back, this.close);
             this.tap(delet,this.delet); 
             this.tap(this.$scroller,this.reviseUp);
             div = back = delet = null;   //回收内存 
+            this.resize();
+
         },
         _add: function () {
             //微信接口方式上传
+        },
+        resize:function(){
+            var that = this;
+            window.onresize = function() {
+                ow = document.documentElement.clientWidth;
+                oh = document.documentElement.clientHeight;
+                if(!isNaN(that.boxSize))that.element.style.width = that.element.style.fontSize = (ow / 100) * that.boxSize + 'px';
+                document.querySelector('.pic-view-load').style.height = oh +'px';
+                [].forEach.call(that.tree,function(o,i){
+                    domCenter(o.litte.firstChild);
+                    figPostion(o.litte);
+                })
+            };
         },
         chosePic: function () {
             //选择上传图片
@@ -231,19 +201,13 @@
             addEvt(this.$picUp.firstChild, 'change', function () {
                 var files = [].slice.call(this.files);
                 files.forEach(function (file, i) {
-                    if(!/image\/\w+/.test(file.type)){
-                        alert('上传的不是图片');
-                        return false;
-                    };
                     //如果图片大于200kb，则压缩
                     var rander = new FileReader();
                     rander.onload = function () {
-                        //if(_this.tree.length==_this.max){ return;}
-                        if( (file.size > (1024 * _this.maxSize))&&this.compress) {
+                        if( (file.size > (1024 * _this.maxSize))&&this.compress!='no') {
                             _this.compressImg(this.result)
                         } else {
                             var upUrl = _this.imgType == 'img' ? toFormData(this.result) : this.result;
-                            //   console.log(upUrl)
                             _this.tree.push(upUrl, this.result);
                         }
                     };
@@ -284,12 +248,6 @@
                 } else {
                     i.appendChild(arguments[0]);
                 }
-            };
-            i.$remove = function(m,n){
-                        i.appendChild(m);
-                        i.removeChild(n);
-                        i.style.overflow = 'hidden';
-                        i.style.zIndex = '700';
             }
             return i;
         },
@@ -299,7 +257,6 @@
             empty(this.$scroller);
             this.tree.empty();
             this.index = 0;
-            this.element.appendChild(this.$picUp)
         },
         _pushPic:function(e){
             var img= new Image();
@@ -315,6 +272,7 @@
                     that.tree[e].litte=figure;
                     that.tree[e].view=views;
                     (e===that.max-1)?that.element.removeChild(that.$picUp):that.element.appendChild(that.$picUp);
+                    that.element.appendChild(that.$flexBg);
                     domCenter(img);
                     if(!that.drag)figPostion(figure),that.longPress(figure);  
                 };
@@ -354,12 +312,15 @@
             }
         },
         _reviseUp:function(){
+            var that=this;
             if(this.$nav.$showIn||!this.slide.isMove)return;
-            $transl(this.$nav).css({transform:prefix+'translate3d(0,-100%,0',opacity:0}).to({
+            this.$tr(this.$nav).css({transform:prefix+'translate3d(0,-100%,0',opacity:0}).to({
                 translate3d:'0,0,0',
                 opacity:1
-            },300,ease);
-            this.$nav.$showIn = true;
+            },300,ease,function(){
+                that.$nav.$showIn = true;
+            });
+            
         },
         _reviseDown:function(){
             if(!this.$nav.$showIn)return;
@@ -367,54 +328,53 @@
             this.$nav.style[transform] = prefix+'translate3d(0,0,0)';
             this.$nav.style.opacity = 1;
             setTimeout(function(){
-                $transl(_this.$nav).to({
+                _this.$tr(_this.$nav).to({
                     translate3d:'0,-100%,0',
                     opacity:0
                 },300,'ease-in');
             },140);
             this.$nav.$showIn=false;
+            
         },
         flexPositions: function (ele) {
             var  offsX = ow / 2 - ele.firstChild.offsetWidth / 2 - ele.firstChild.getBoundingClientRect().left;
             var  offsY = oh / 2 - ele.firstChild.offsetHeight / 2 - ele.firstChild.getBoundingClientRect().top;
-            this.positions.x = offsX;
-            this.positions.y = offsY;
-            this.positions.w = ele.firstChild.offsetWidth;
-            this.positions.h = ele.firstChild.offsetHeight;
-            this.positions.n = ((ow / ele.firstChild.offsetWidth) * ele.firstChild.offsetHeight) > oh ? oh / ele.firstChild.offsetHeight : ow / ele.firstChild.offsetWidth;
-            this.$flexDiv.insertBefore(ele.firstChild, this.$flexDiv.firstChild);
-            ele.appendChild(this.$flexDiv);
-            ele.style.overflow = 'visible';
+            var positions ={
+                x:offsX,
+                y:offsY,
+                w:ele.firstChild.offsetWidth,
+                h:ele.firstChild.offsetHeight,
+                n:((ow / ele.firstChild.offsetWidth) * ele.firstChild.offsetHeight) > oh ? oh / ele.firstChild.offsetHeight : ow / ele.firstChild.offsetWidth
+            }
+            offsX = offsY =null;
+            return positions;
         },
         _showPic:function(){
             var conn = this.tree[this.index].litte;
             var img = conn.firstChild;
             var that = this;
-                this.flex(conn);
+            var positions=this.flex(conn);
+                this.timeOut=true;
                 this.slide.range = -this.index*(ow + 16);
-                conn.style.zIndex='720';
-                this.timeOut=setTimeout(function(){
-                    $transl(that.$flexDiv).to(
-                        { translate3d: that.positions.x + "px," + that.positions.y + "px,0" }, 300, ease
-                    );
-                    $transl(img).to(
-                        { scale: that.positions.n }, 300, ease, function () {
+                this.$tr(conn).css({'z-index':'720',overflow:'visible'}).to(
+                         { translate3d: positions.x + "px," + positions.y + "px,0" }, 300, ease
+                     )
+                this.$tr(img).to(
+                         { scale: positions.n }, 300, ease, function () {
                             document.querySelector('.pic-view-load').style.display = 'block';
-                            conn.$remove(img,that.$flexDiv);
-                            that.reviseDown();
-                            that.$flexDiv.style[transform] = '';
-                            that.$flexBg.style.opacity = 0;
-                            img.style[transform] = '';
-                            img = that = that.timeOut = null;                      
-                        }
-                    );
-                    $transl(that.$flexBg).to(
-                        { opacity: 1 }, 300, ease
-                    );
-                },0)                
+                             that.reviseDown();
+                             conn.style='';
+                             that.$flexBg.style.opacity = 0;
+                             img.style[transform] = '';
+                             img = that = positions=that.timeOut = null;                   
+                         }
+                     );
+                this.$tr(that.$flexBg).css({display:'block',opacity:0}).to(
+                    { opacity: 1 }, 300, ease
+                );
+                    
         },
         preview: function (obj, e) {
-            
                 if(obj.timeOut) return;
                 obj.index = this.$picNum;
                 obj.showPic();
@@ -423,28 +383,23 @@
         close: function (obj, e) {
             if(obj.timeOut) return;  //如果正在执行预览或返回动画则取消接下来的动作;
             var eq = obj.index,
-                that = obj.tree[eq].litte,
-                img = that.firstChild;
-                obj.flex(that);
-                obj.$flexDiv.style[transform] = prefix + 'translate3d(' + obj.positions.x + 'px,' + obj.positions.y + 'px,0)';
-                obj.$flexBg.style.opacity = 1;
-                img.style[transform] = prefix + 'scale(' + obj.positions.n + ')';
-                that.style.zIndex = '720';
+                that = obj.tree[eq].litte;
+            var positions = obj.flex(that);
                 document.querySelector('.pic-view-load').style.display = 'none';
-                obj.timeOut = setTimeout(function () {   //非链式操作的代价，动画会与dom位移操作同时进行，将不会触发动画效果
-                    $transl(obj.$flexDiv).to(
-                        { translate3d: "0,0,0" }, 300, ease
-                    );
-                    $transl(img).to(
-                        { scale: 1 }, 300, ease, function () {
-                            that.$remove(img,obj.$flexDiv);
-                            eq = that = img = obj.timeOut = null;  
-                        }
-                    );
-                    $transl(obj.$flexBg).to(
-                        { opacity: 0 }, 300, ease
-                    );
-                }, 0);
+                obj.$tr(that).css({transform:prefix + 'translate3d(' + positions.x + 'px,' + positions.y + 'px,0)','z-index':'720','overflow':'visible'});
+                obj.$tr(that.firstChild).css(transform,prefix + 'scale(' + positions.n + ')');
+                obj.$tr(obj.$flexBg).css({opacity:1,display:'block'});
+                obj.timeOut=setTimeout(function(){
+                 that.firstChild.to(
+                      { scale: 1 }, 300, ease, function () {
+                            that.style='';
+                            obj.$flexBg.style='';
+                            eq = that = positions  = obj.timeOut = null; 
+                     }
+                 );
+                 that.to( { translate3d: "0,0,0" }, 300, ease);
+                 obj.$flexBg.to({opacity:0},300,ease);
+                },34)
                 e.stopPropagation();
         },
         delet:function(obj, e){
@@ -459,7 +414,8 @@
                         figPostion(i.litte);
                     });
                     (obj.index==obj.tree.length)&&obj.index--;
-                    obj.element.appendChild(obj.$picUp)
+                    obj.element.appendChild(obj.$picUp);
+                    obj.element.appendChild(obj.$flexBg)
         },
         _tap: function (element, fn) {
             if (element.$tap_objs) {
@@ -514,6 +470,47 @@
         _reTap: function (element, fn) {
             arguments.length == 1 ? element.$tap_objs = [] : removeArray(element.$tap_objs, fn);
         },
+        $tr:function(ele){
+            if(!ele.to){ele.to=this.animate.bind(ele);}
+            if(!ele.css){ele.css = this.css.bind(ele);}
+            return ele;
+        },
+        animate:function(type,time,ease,callback){
+                    var cssValues = {}, transforms = '', cssProperties = [];
+                    for (var key in type) {
+                        if (supportedTransforms.test(key)) transforms += prefix + key + '(' + type[key] + ') '
+                        else cssValues[key] = type[key], cssProperties.push(key)
+                    }
+                    if (transforms) {
+                        cssValues[transform] = transforms;
+                        cssProperties.push(transform);
+                    }
+                    cssValues[transitionDuration] = time + 'ms'
+                    cssValues[transitionTiming] = (ease || 'linear')
+                    cssValues[transitionProperty] = cssProperties.join(', ');
+
+                    for (var n in cssValues) {
+                        this.style[n] = cssValues[n];
+                    }
+                    this.$endFn = callback ||function(){};
+                    if(!this.$trans){
+                    
+                    addEvt(this,transitionEnd,function(){
+                        for(var i in cssReset){
+                            this.style[i] = '';
+                        }
+                        this.$endFn.call(this);
+                        this.$trans = true;
+                        this.$endFn = function(){};
+                    })
+                };
+                return this;        
+        },
+        css:function(){
+            if(arguments.length==1)for(var i in arguments[0]){ this.style[i]=arguments[0][i]}
+            else{this.style[arguments[0]]=arguments[1]}
+            return this;
+        },
         scrollMove: function (obj) {
             var startx, _startx, move, movex, time, endx, startTime, endTime;
             //开始触摸函数，event为触摸对象
@@ -527,9 +524,8 @@
                     obj.slide.max = -(obj.tree.length - 1) * (ow + 16);
                     obj.slide.isMove = true;
                 } else if (event.type == "touchmove") {
-                    obj.slide.isMove = false;
-                    obj.reviseDown();
-                    move = Math.floor(event.touches[0].pageX)
+                    move = Math.floor(event.touches[0].pageX);
+                    if(move!=startx)obj.slide.isMove = false,obj.reviseDown();
                     movex = move - _startx;
                     obj.$scroller.style[transitionDuration] = '0ms';
                     if (obj.slide.range >= 0) {
@@ -586,21 +582,21 @@
         _longPress:function(dom){
             var that = this;
             var press = false;
-            var ready = false
+            var ready = false;
+            var startx,starty,porx,pory,movex,movey,changeTransl;
             function onPress(event) {
                 event.preventDefault();
-                var now,porx,pory,movex,movey;
                 if (event.type == "touchstart") {
                     var _this =this;
+                    startx = Math.floor(event.touches[0].pageX);
+                    starty = Math.floor(event.touches[0].pageY);
                     that.longPre = setTimeout(function(){
                         ready = true;
                         press = true;
-                        $transl(_this).css({'z-index':'720'}).to({scale:1.14,opacity:'0.7'},200,ease,function(){
+                        that.$tr(_this).css({'z-index':'720'}).to({scale:1.15,opacity:'0.7'},200,ease,function(){
                             that.onTouch = _this.$picNum;
                             that.addClass();
-                            _this.startx = Math.floor(event.touches[0].pageX);
-                            _this.starty = Math.floor(event.touches[0].pageY);
-                            touchCenter(_this);
+                            touchCenter(_this,startx,starty);
                             press = false;
                         });
                     },301);
@@ -618,21 +614,17 @@
                             return;
                         }
                     }else{
-                        porx = movex - this.startx;
-                        pory = movey - this.starty;
+                        porx = movex - startx;
+                        pory = movey - starty;
                         that.restFix(movex+this.centerx,movey+this.centery);
-                        this.style[transform]= prefix + 'translate3d('+porx+ 'px,'+pory+'px,0) '+ prefix + 'scale(1.14)';
+                        this.style[transform]= prefix + 'translate3d('+porx+ 'px,'+pory+'px,0) '+ prefix + 'scale(1.15)';
                         event.stopPropagation();
                     }
-                    
                 } else if (event.type == "touchend" || event.type == "touchcancel") {
-                    clearTimeout(that.longPre);  
-                    if(ready&&!press&&(that.changePic>-1))that.restLitte(this)
-                    ready&&$transl(this).to({scale:1,opacity:1},200,ease,function(){
-                        for(var i = 0 ;i<that.tree.length;i++){
-                            that.tree[i].litte.$picNum = i;
-                            figPostion(that.tree[i].litte);
-                        };
+                    clearTimeout(that.longPre);
+                    changeTransl =  that.changePic>-1? (that.tree[that.changePic].litte.$left - this.$left)+'px,'+(that.tree[that.changePic].litte.$top - this.$top)+'px,0':'0,0,0';
+                    ready&&that.$tr(this).to({scale:1,opacity:1,translate3d:changeTransl},300,ease,function(){
+                        if(!press&&(that.changePic>-1))that.restLitte(this)
                         ready = false;
                         }).css({'z-index':'700'});
                 }
@@ -645,9 +637,8 @@
             return (x-this.$left)>0&&(x-this.$left)<this.offsetWidth&&(y-this.$top)>0&&(y-this.$top)<this.offsetHeight
         },
         restLitte:function(fig){
-            console.log(this.onTouch,this.changePic)
                     for(var i = 0 ;i<this.tree.length;i++){
-                        if(i!=this.onTouch) this.tree[i].litte.style='';
+                         this.tree[i].litte.style='';
                     }
                 var that = this;
                 var index = this.changePic>this.onTouch? this.changePic+1:this.changePic
@@ -655,50 +646,58 @@
                 this.$scroller.insertBefore(this.tree[this.onTouch].view,this.$scroller.childNodes[index]);
                 this.tree.move(this.onTouch,this.changePic);
                 this.removeClass();
-                
-            
-            
+                this.figPostion();
+        },
+        figPostion:function(){
+            for(var i = 0;i<this.tree.length;i++){
+                this.tree[i].litte.$picNum = i;
+                figPostion(this.tree[i].litte);
+            }
+        },
+        restPicRight:function(i){
+            for(var n = 0;n<this.tree.length;n++){
+                    if(n!=this.onTouch){
+                           if(n>this.onTouch&&n<=i){
+                                 this.tree[n].litte.style[transform] = 'translate3d(' + 
+                                 (this.tree[n-1].litte.$left - this.tree[n].litte.$left) +'px,'+ 
+                                 (this.tree[n-1].litte.$top - this.tree[n].litte.$top) +'px,0)';
+                                 }else{
+                           this.tree[n].litte.style = '';
+                        }
+                  }
+             };
+        },
+        restPicLeft:function(i){
+               for(var n = 0;n<this.tree.length;n++){
+                                    if(n!=this.onTouch){
+                                        if(n<this.onTouch&&n>=i){
+                                            this.tree[n].litte.style[transform] = 'translate3d(' + 
+                                            (this.tree[n+1].litte.$left - this.tree[n].litte.$left) +'px,'+ 
+                                            (this.tree[n+1].litte.$top - this.tree[n].litte.$top) +'px,0)';
+                                        }else{
+                                  this.tree[n].litte.style = '';
+                                }
+                        }
+              };
         },
         restFix:function(x,y){
             var that = this;
             [].forEach.call(this.tree,function(o,i){
-                if(that.isZoon.call(o.litte,x,y)){
+                if(that.isZoon.call(o.litte,x,y)&&that.changePic!=i){
                     if(that.onTouch!=i){
                             if(i>that.onTouch){
-                                for(var n = 0;n<that.tree.length;n++){
-                                    if(n!=that.onTouch){
-                                        if(n>that.onTouch&&n<=i){
-                                            that.tree[n].litte.style[transform] = 'translate3d(' + 
-                                            (that.tree[n-1].litte.$left - that.tree[n].litte.$left) +'px,'+ 
-                                            (that.tree[n-1].litte.$top - that.tree[n].litte.$top) +'px,0)';
-                                        }else{
-                                            that.tree[n].litte.style = '';
-                                        }
-                                    }
-                                };
+                                that.restPicRight(i);
                                 return that.changePic = i;
                             };
                             if(i<that.onTouch){
-                                for(var n = 0;n<that.tree.length;n++){
-                                    if(n!=that.onTouch){
-                                        if(n<that.onTouch&&n>=i){
-                                            that.tree[n].litte.style[transform] = 'translate3d(' + 
-                                            (that.tree[n+1].litte.$left - that.tree[n].litte.$left) +'px,'+ 
-                                            (that.tree[n+1].litte.$top - that.tree[n].litte.$top) +'px,0)';
-                                        }else{
-                                            that.tree[n].litte.style = '';
-                                        }
-                                    }
-                                };
+                                that.restPicLeft(i);
                                 return that.changePic = i;
                             }
                         
-                }else{
-                        for(var n = 0;n<that.tree.length;n++){
-                            if(n!=that.onTouch){
-                                that.tree[n].litte.style = '';  
-                            }
-                    }    
+                }else{  
+                    for(var n = 0;n<that.tree.length;n++){
+                        if(n!=that.onTouch)that.tree[n].litte.style = '';
+                    }
                     return that.changePic = i;  
                     }
                 } 
