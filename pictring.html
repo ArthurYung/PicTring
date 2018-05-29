@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
-    <link rel="stylesheet" href="./css/picter.css">
+    <link rel="stylesheet" href="./css/pictring.css">
     <style>
         .go{
                 margin: 20px auto;
@@ -32,12 +32,13 @@
     <button href="#" class="go" onclick="go()">see files</button>
     <script src='./pictring.js'></script>
     <script>
+        var pictring;
    window.onload = function(){
-      window.p = new PicTring({
+      pictring = new PicTring({
             up: document.getElementById("dom"), //dom
             imgType:'img',     //上传图片的类型 img / base，默认为base
             type:'file',    //上传图片方式
-            max:6 ,         //最大图片 默认为9
+            max:9 ,         //最大图片 默认为9
             drag:false,      //禁止图片拖拽排序  默认为false 即可拖拽排序
             boxSize: 80 ,   //容器尺寸,屏幕的百分比，也可传入定值的px
             compress:0.8 ,  //图片质量，0-1， 'no'为原图
@@ -45,9 +46,15 @@
         });
    }
        function go(){
-            console.log(
-                p.upfiles([2,3])); //获取已上图片的值  可输入数字/数组 ，空值返回全部图片
-          //  p.empty();  //清空所有 
+            alert(
+                pictring.upfiles()//获取已上图片的值  可输入数字/数组 ，空值返回全部图片
+    
+             ) ;
+             console.log(
+                pictring.upfiles()
+             )
+             pictring.empty();
+            
         }
        
     </script>
