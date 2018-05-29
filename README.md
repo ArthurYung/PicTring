@@ -1,6 +1,16 @@
 # PicTring.js
 一个轻量的移动端图片上传插件
 
+* npm下载
+```js
+npm install pictring
+```
+* 在需要的页面引入
+```js
+import 'pictring/pictring.css'
+import 'pictring/pictring.js'
+```
+
 # API:
 ```js
 var pictring = new PicTring({
