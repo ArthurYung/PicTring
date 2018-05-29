@@ -1,5 +1,5 @@
 # PicTring.js
-一个轻量的移动端图片上传插件
+一个轻量的移动端图片上传／预览插件，可自定义图片数量／压缩质量／图片拖拽排序等功能。
 
 
 # API:
@@ -8,7 +8,7 @@ var pictring = new PicTring({
         up:(必须)dom,  //dom ;
         imgType: 'base', //上传图片的方式，默认为base , 可选base/file   (file为上传图片文件);
         max: 9,    //最大上传张数,默认为9;
-        drag: false,  //是否禁止图片拖拽排序，默认为false;
+        drag: false,  //是否禁止图片长按拖拽排序，默认为false;
         boxSize: 80 , //容器尺寸，默认为80，可传入数字， 或固定PX值;
         compress: 0.8 , //图片质量，0-1 ，'no'为原图 ，默认为0.92
         maxSize: 600    //超过多大时进行图片质量压缩，默认为600kb;
