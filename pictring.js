@@ -1,4 +1,4 @@
- /* PicTring v0.2.0
+ /* PicTring v1.0.3
  * By Arthur Yang http://www.vanoc.top/
  * Github: https://github.com/ChuckOu/PicTring
  * MIT Licensed.
