@@ -4,6 +4,16 @@
 
 支持android／ios
 
+npm安装
+```js
+npm install pictring
+```
+在需要的页面引入
+```js
+import 'pictring'
+import 'pictring/pictring.css'
+```
+
 # API:
 ```js
 var pictring = new PicTring({
